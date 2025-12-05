@@ -1,0 +1,233 @@
+A.1 Setup, Installation, and Data Loading 
+# 1. INSTALLATION (Run only once)
+# install.packages("tidyverse") 
+# install.packages("janitor")   
+# install.packages("caret")     
+# install.packages("e1071")    
+# install.packages("ROCR")      
+
+# 2. LOAD LIBRARIES (Run every time)
+library(tidyverse)
+library(janitor)
+library(caret)
+library(e1071)
+library(ROCR)
+
+# 3. DATA LOADING AND INITIAL INSPECTION
+# Read the CSV file into a dataframe named 'telconow_churn_data' library(readr) 
+telconow_churn_data <- read_csv("Downloads/telconow_churn_data.csv") View(telconow_churn_data)
+
+# Confirm the data is loaded
+glimpse(telconow_churn_data)
+
+# Initial Exploration (Checking structure and summary statistics)
+head(telconow_churn_data) # Check the first 6 rows
+str(telconow_churn_data) # Check the structure and data types of columns
+summary(telconow_churn_data) # Check summary statistics (Min, Max, Mean, NA counts)
+
+
+
+
+
+
+
+A.2 Data Cleaning and Pre-Processing 
+# 1. HANDLING MISSING VALUES in TotalCharges
+# Step 1a: Coerce TotalCharges to numeric. Blank strings become NA.
+telconow_churn_data_cleaned <- telconow_churn_data %>%
+  mutate(
+    TotalCharges = suppressWarnings(as.numeric(TotalCharges))
+  )
+
+# Check how many missing values (NAs) were created
+sum(is.na(telconow_churn_data_cleaned$TotalCharges))
+
+# Step 1b: Impute NAs to 0
+telconow_churn_data_cleaned <- telconow_churn_data_cleaned %>%
+  mutate(
+    TotalCharges = replace_na(TotalCharges, 0)
+  )
+
+# Verify no more NAs in TotalCharges
+sum(is.na(telconow_churn_data_cleaned$TotalCharges)) # Should show 0
+
+# 2. FEATURE TRANSFORMATION AND REFINEMENT
+
+# Step 2a: Convert Churn (Target Variable) to a numeric factor (0 or 1)
+# 1 = Churned, 0 = Did Not Churn (Essential for binary classification models like Logistic Regression)
+telconow_churn_data_cleaned <- telconow_churn_data_cleaned %>%
+  mutate(
+    Churn = ifelse(Churn == "Yes", 1, 0), # ifelse converts "Yes" to 1, and everything else ("No") to 0
+    Churn = as.factor(Churn)             # Convert the 0/1 variable to a factor type
+  )
+
+# Step 2b: Clean up 'No internet service' categories
+# Replace the descriptive level 'No internet service' with the simpler 'No' 
+# across all related services for cleaner analysis and visualisation.
+telconow_churn_data_cleaned <- telconow_churn_data_cleaned %>%
+  mutate(across(c(OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport, StreamingTV, StreamingMovies),
+                ~recode(., "No internet service" = "No")))
+
+# Step 2c: Remove the CustomerID column
+# This unique identifier is not a useful predictor and should be excluded from the model.
+telconow_churn_data_cleaned <- telconow_churn_data_cleaned %>%
+  select(-customerID)
+
+# Step 2d: Convert SeniorCitizen to a Factor/Category
+# Treat 0/1 as categories rather than a continuous number.
+telconow_churn_data_cleaned <- telconow_churn_data_cleaned %>%
+  mutate(SeniorCitizen = as.factor(SeniorCitizen))
+
+# Final check of the cleaned data structure
+glimpse(telconow_churn_data_cleaned)
+
+
+
+
+
+
+
+A.3 Exploratory Data Analysis (EDA) and Visualisation 
+# A1. Tenure Distribution Comparison (Box Plot)
+ggplot(telconow_churn_data_cleaned, aes(x = Churn, y = tenure, fill = Churn)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("0" = "#56B4E9", "1" = "#E69F00")) +
+  labs(title = "Tenure is a Key Indicator of Churn Risk",
+       subtitle = "Churners tend to have a much shorter relationship with TelcoNow.",
+       y = "Customer Tenure (Months)",
+       x = "Churn Status (0 = No, 1 = Yes)") +
+  theme_minimal()
+
+# A2. Monthly Charges Distribution Comparison (Density Plot)
+ggplot(telconow_churn_data_cleaned, aes(x = MonthlyCharges, fill = Churn)) +
+  geom_density(alpha = 0.6) + 
+  labs(title = "Monthly Charges Distribution by Churn Status",
+       x = "Monthly Charges ($)") +
+  theme_minimal()
+
+# Helper function to create percentage bar charts
+plot_churn_by_category <- function(data, variable) {
+  data %>%
+    count({{variable}}, Churn) %>%
+    group_by({{variable}}) %>%
+    mutate(percent = n / sum(n)) %>%
+    ggplot(aes(x = {{variable}}, y = percent, fill = Churn)) +
+    geom_bar(stat = "identity", position = "fill") +
+    scale_fill_manual(values = c("0" = "#56B4E9", "1" = "#E69F00")) +
+    geom_text(aes(label = scales::percent(percent, accuracy = 1)),
+              position = position_fill(vjust = 0.5), size = 3) +
+    labs(title = paste("Churn Rate by", deparse(substitute(variable))),
+         y = "Proportion",
+         x = deparse(substitute(variable))) +
+    theme_minimal()
+}
+
+# B1. Churn by Contract Type (Crucial Insight)
+plot_churn_by_category(telconow_churn_data_cleaned, Contract)
+
+# B2. Churn by Internet Service Type
+plot_churn_by_category(telconow_churn_data_cleaned, InternetService)
+
+# B3. Churn by Payment Method
+plot_churn_by_category(telconow_churn_data_cleaned, PaymentMethod)
+
+# For Model Training and Interpretation 
+# Set a seed for reproducibility (so results are the same every time)
+set.seed(42) 
+
+# Create indices for the training data (70% of total data)
+train_index <- createDataPartition(telconow_churn_data_cleaned$Churn, p = 0.7, list = FALSE)
+
+# Subset the data
+train_data <- telconow_churn_data_cleaned[train_index, ]
+test_data  <- telconow_churn_data_cleaned[-train_index, ]
+
+# Train the Logistic Regression Model
+# Churn ~ . means predict Churn using ALL other variables
+model_logistic <- glm(Churn ~ ., data = train_data, family = "binomial")
+
+# View the model summary (Shows coefficients and p-values)
+summary(model_logistic)
+
+
+
+
+
+
+
+A.4 Predictive Modeling, Evaluation, and Segmentation 
+# Note: The coefficient signs indicate influence: Positive = increases churn risk.
+
+# 1. MODEL PREDICTION AND BASELINE EVALUATION (Threshold 0.50)
+
+# 1A. Make probability predictions (risk scores) on the test set
+test_probabilities <- predict(model_logistic, newdata = test_data, type = "response")
+
+# 1B. Convert probabilities to a predicted class using a 0.50 threshold
+test_predictions_50 <- ifelse(test_probabilities > 0.5, 1, 0)
+
+# 1C. Create a Confusion Matrix
+confusionMatrix(factor(test_predictions_50), test_data$Churn, positive = "1")
+
+# 2. ROC CURVE AND AUC CALCULATION
+
+# 2A. Create prediction and performance objects
+pred_object <- prediction(test_probabilities, test_data$Churn)
+perf_object <- performance(pred_object, measure = "tpr", x.measure = "fpr")
+
+# 2B. Plot the ROC Curve for the final report
+plot(perf_object, 
+     main = "Receiver Operating Characteristic (ROC) Curve", 
+     col = "#0072B2", 
+     lwd = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray") # 50/50 baseline
+
+[Image of the ROC curve is generated]
+
+# 2C. Calculate and print the AUC value
+auc_object <- performance(pred_object, measure = "auc")
+auc_value <- auc_object@y.values[[1]]
+print(paste("Model AUC:", round(auc_value, 4)))
+
+# 3. STRATEGIC THRESHOLD IDENTIFICATION
+
+# Code to generate the performance data table for determining the Strategic Threshold
+# Calculate the Sensitivity (TPR) and Specificity (TNR) at every possible threshold
+perf_data <- data.frame(
+  thresholds = unlist(perf_object@alpha.values),
+  tpr = unlist(perf_object@y.values),
+  fpr = unlist(perf_object@x.values)
+) %>%
+  # Calculate Specificity (TNR = 1 - FPR)
+  mutate(tnr = 1 - fpr) %>%
+  # Keep only thresholds between 0 and 1
+  filter(thresholds <= 1, thresholds >= 0)
+
+# Search the performance data frame for thresholds meeting the strategic goal (where Sensitivity > 0.70)
+# I prioritise Sensitivity (tpr) and then look for the highest corresponding Specificity above (tnr).
+strategic_threshold_data <- perf_data %>%
+  filter(tpr >=0.70, tnr >= 0.70) %>% # Look for both Sensitivity AND Specificity above 70%
+  arrange(desc(tpr)) # Sort to see the best options
+
+# Print the top options to identify my best threshold
+head(strategic_threshold_data)
+
+# 4. IDENTIFYING THE TARGET SEGMENT 
+
+# Define the strategic threshold based on the ROC analysis
+STRATEGIC_THRESHOLD <- 0.2401
+
+# Create a final dataframe combining test data with predicted probabilities
+high_risk_customers <- test_data %>%
+  mutate(
+    Churn_Probability = test_probabilities, # This is the customer's risk score
+    Risk_Segment = ifelse(test_probabilities >= STRATEGIC_THRESHOLD, "High Risk Target", "Low Risk")
+  ) %>%
+  # Filter only the customers who qualify for an intervention offer
+  filter(Risk_Segment == "High Risk Target") %>%
+  arrange(desc(Churn_Probability)) # Sort by highest risk first
+
+# Final count and profile of the target segment
+nrow(high_risk_customers)
+high_risk_customers %>% count(Contract)
+high_risk_customers %>% count(InternetService)
