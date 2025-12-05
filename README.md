@@ -84,8 +84,11 @@ Initial data inspection showed that the TotalCharges column was incorrectly inte
 2. Feature Refinement and Transformation
 
 Several variables were adjusted to ensure they were correctly formatted for the predictive classification model.
+
 A. Target Variable Transformation (Churn): The target variable was converted from its text format ("Yes", "No") into a numeric factor (1, 0) respectively. This binary numerical representation is mandatory for training classification algorithms.
+
 B. Categorical Simplification: In several service columns (eg. OnlineSecurity, TechSupport), the category "No internet service" was functionally redundant with "No". These were standardised to a single category, "No" for simpler analysis and cleaner modeling.
+
 C. Variable Type Correction: The SeniorCitizen column was corrected from an integer to a factor to ensure the model treats it as a discrete category rather than a continuous numeric variable.
 
 ![image](https://github.com/Jerry5612/data-analyst-casestudy3/blob/Jerry5612-patch-3/image17.png)
