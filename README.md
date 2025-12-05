@@ -76,15 +76,17 @@ Furthermore, summary statistics serve as a data validation tool, confirming that
 
 ### Data Cleaning
 1. Handling Missing Values in TotalCharges
+
 Initial data inspection showed that the TotalCharges column was incorrectly interpreted as a text-based (character) variable due to the presence of blank entries. This was corrected by coercing the data to a numeric type by imputing the resulting missing values (NAs) with 0. This change was made because the customers with missing charges were confirmed to have zero tenure, indicating they were new subscribers not yet billed, and thus a charge of zero is the most logical imputation.
 
 ![image](https://github.com/Jerry5612/data-analyst-casestudy3/blob/Jerry5612-patch-3/image9.png)
 
 2. Feature Refinement and Transformation
+
 Several variables were adjusted to ensure they were correctly formatted for the predictive classification model.
-Target Variable Transformation (Churn): The target variable was converted from its text format ("Yes", "No") into a numeric factor (1, 0) respectively. This binary numerical representation is mandatory for training classification algorithms.
-Categorical Simplification: In several service columns (eg. OnlineSecurity, TechSupport), the category "No internet service" was functionally redundant with "No". These were standardised to a single category, "No" for simpler analysis and cleaner modeling.
-Variable Type Correction: The SeniorCitizen column was corrected from an integer to a factor to ensure the model treats it as a discrete category rather than a continuous numeric variable.
+A. Target Variable Transformation (Churn): The target variable was converted from its text format ("Yes", "No") into a numeric factor (1, 0) respectively. This binary numerical representation is mandatory for training classification algorithms.
+B. Categorical Simplification: In several service columns (eg. OnlineSecurity, TechSupport), the category "No internet service" was functionally redundant with "No". These were standardised to a single category, "No" for simpler analysis and cleaner modeling.
+C. Variable Type Correction: The SeniorCitizen column was corrected from an integer to a factor to ensure the model treats it as a discrete category rather than a continuous numeric variable.
 
 ![image](https://github.com/Jerry5612/data-analyst-casestudy3/blob/Jerry5612-patch-3/image17.png)
 
