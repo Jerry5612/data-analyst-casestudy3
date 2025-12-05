@@ -215,7 +215,7 @@ By moving from a blanket retention strategy to a targeted approach, TelcoNow can
 ### 2. Implementation Plan and Next Steps
 The following steps are recommended for the implementation of this new strategy and for advancing TelcoNow's overall predictive analytics capability.
 
-#### A. Immediate Action Plan for Churn Mitigation �
+#### A. Immediate Action Plan for Churn Mitigation 
 #### Issue Personalised Offers
 
 The Marketing/Retention team is responsible for the immediate action of issuing personalised offers. The rationale is to immediately target the 914 high-risk customers with the specific, tailored offers defined in the analysis (e.g., Contract Upgrade, Free Tech Support, Auto-Pay Discount).
