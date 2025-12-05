@@ -94,6 +94,7 @@ C. Variable Type Correction: The SeniorCitizen column was corrected from an inte
 ![image](https://github.com/Jerry5612/data-analyst-casestudy3/blob/Jerry5612-patch-3/image17.png)
 
 3. Structural Cleaning
+
 The customerID column, which serves only as a unique identifier, was removed from the dataset. It has no predictive value and can cause computational noise during the model training process. The final, cleaned dataset is saved as telconow_churn_data_cleaned.
 
 ![image](https://github.com/Jerry5612/data-analyst-casestudy3/blob/Jerry5612-patch-3/image4.png)
